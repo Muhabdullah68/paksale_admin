@@ -1,13 +1,13 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/product_model.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_model.dart';
+import '../models/product_model.dart';
 
 class FirebaseService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Log action
+  // System Logs
   Future<void> _logAction(String action, String details) async {
     final user = _auth.currentUser;
     await _firestore.collection('system_logs').add({
@@ -93,6 +93,8 @@ class FirebaseService {
 
   // Admin Management
   Future<void> createAdmin(String email, String password) async {
+    // This requires Cloud Functions for production-grade admin management
+    // For now, we store admin records in a collection
     await _firestore.collection('admins').add({
       'email': email,
       'createdAt': FieldValue.serverTimestamp(),
@@ -104,46 +106,24 @@ class FirebaseService {
     return _firestore.collection('admins').snapshots();
   }
 
-  // COD Orders
-  Stream<QuerySnapshot> getAllOrders() {
-    return _firestore
-        .collection('cod_orders')
-        .orderBy('createdAt', descending: true)
-        .snapshots();
-  }
-
-  Future<void> updateOrderStatus(String orderId, String status) async {
-    await _firestore.collection('cod_orders').doc(orderId).update({
-      'status': status,
-      if (status == 'delivered') 'deliveredAt': FieldValue.serverTimestamp(),
-    });
-    await _logAction('Update Order Status', 'OrderID: $orderId, Status: $status');
-  }
-
   // Categories
   Stream<QuerySnapshot> getCategories() {
-    return _firestore.collection('categories').orderBy('order').snapshots();
+    return _firestore.collection('categories').snapshots();
   }
 
   Future<void> addCategory(String name, String iconUrl) async {
-    try {
-      final docRef = await _firestore.collection('categories').add({
-        'name': name,
-        'iconUrl': iconUrl,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-      print('✅ Category added successfully with ID: ${docRef.id}');
-
-      await sendBroadcastNotification(
-        'New Category Added',
-        'We have added $name to our marketplace. Start exploring now!',
-      );
-
-      await _logAction('Add Category', 'Name: $name');
-    } catch (e) {
-      print('❌ Error adding category: $e');
-      rethrow;
-    }
+    await _firestore.collection('categories').add({
+      'name': name,
+      'iconUrl': iconUrl,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    
+    await sendBroadcastNotification(
+      'New Category Added',
+      'We have added $name to our marketplace. Start exploring now!',
+    );
+    
+    await _logAction('Add Category', 'Name: $name');
   }
 
   Future<void> deleteCategory(String id) async {
@@ -151,7 +131,7 @@ class FirebaseService {
     await _logAction('Delete Category', 'ID: $id');
   }
 
-  // Subcategories (for compatibility)
+  // Subcategories
   Stream<QuerySnapshot> getSubcategories(String categoryId) {
     return _firestore
         .collection('categories')
@@ -354,34 +334,28 @@ class FirebaseService {
     await _logAction('Seed Categories', 'All categories seeded');
   }
 
-  // CMS (Content Management System)
-  Stream<DocumentSnapshot> getCmsContent(String docId) {
+  // CMS (Terms, Privacy, Help)
+  Stream<DocumentSnapshot> getCMSContent(String docId) {
     return _firestore.collection('cms').doc(docId).snapshots();
   }
 
-  Future<void> updateCmsContent(String docId, String content) async {
-    try {
-      await _firestore.collection('cms').doc(docId).set({
-        'content': content,
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-      print('✅ CMS content updated successfully for DocID: $docId');
-
-      // Notify users about policy update
-      String title = 'Policy Updated';
-      if (docId == 'terms') title = 'Terms of Service Updated';
-      if (docId == 'privacy') title = 'Privacy Policy Updated';
-
-      await sendBroadcastNotification(
-        title,
-        'We have updated our $title. Please review the changes in the app.',
-      );
-
-      await _logAction('Update CMS', 'DocID: $docId');
-    } catch (e) {
-      print('❌ Error updating CMS content: $e');
-      rethrow;
-    }
+  Future<void> updateCMSContent(String docId, String content) async {
+    await _firestore.collection('cms').doc(docId).set({
+      'content': content,
+      'lastUpdated': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+    
+    // Notify users about policy update
+    String title = 'Policy Updated';
+    if (docId == 'terms') title = 'Terms of Service Updated';
+    if (docId == 'privacy') title = 'Privacy Policy Updated';
+    
+    await sendBroadcastNotification(
+      title,
+      'We have updated our $title. Please review the changes in the app.',
+    );
+    
+    await _logAction('Update CMS', 'DocID: $docId');
   }
 
   // Banners
@@ -390,24 +364,18 @@ class FirebaseService {
   }
 
   Future<void> addBanner(String imageUrl, String? link) async {
-    try {
-      final docRef = await _firestore.collection('banners').add({
-        'imageUrl': imageUrl,
-        'link': link,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-      print('✅ Banner added successfully with ID: ${docRef.id}');
-
-      await sendBroadcastNotification(
-        'New Promotion!',
-        'Check out our new featured banners for exciting offers.',
-      );
-
-      await _logAction('Add Banner', 'URL: $imageUrl');
-    } catch (e) {
-      print('❌ Error adding banner: $e');
-      rethrow;
-    }
+    await _firestore.collection('banners').add({
+      'imageUrl': imageUrl,
+      'link': link,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    
+    await sendBroadcastNotification(
+      'New Promotion!',
+      'Check out our new featured banners for exciting offers.',
+    );
+    
+    await _logAction('Add Banner', 'URL: $imageUrl');
   }
 
   Future<void> deleteBanner(String id) async {
@@ -417,18 +385,12 @@ class FirebaseService {
 
   // Global Notifications (Broadcast)
   Future<void> sendBroadcastNotification(String title, String body) async {
-    try {
-      final docRef = await _firestore.collection('broadcast_notifications').add({
-        'title': title,
-        'body': body,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-      print('✅ Broadcast notification sent successfully with ID: ${docRef.id}');
-      await _logAction('Send Broadcast Notification', 'Title: $title');
-    } catch (e) {
-      print('❌ Error sending broadcast notification: $e');
-      rethrow; // Re-throw to let UI handle error
-    }
+    await _firestore.collection('broadcast_notifications').add({
+      'title': title,
+      'body': body,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+    await _logAction('Send Broadcast Notification', 'Title: $title');
   }
 
   // Notifications
@@ -454,7 +416,11 @@ class FirebaseService {
 
   // Reports (Moderation)
   Stream<QuerySnapshot> getReports() {
-    return _firestore.collection('reports').snapshots();
+    return _firestore
+        .collection('reports')
+        // Removing orderBy temporarily as it might filter out documents missing the timestamp field
+        // .orderBy('timestamp', descending: true)
+        .snapshots();
   }
 
   Future<void> updateReportStatus(String reportId, String status) async {
@@ -476,5 +442,31 @@ class FirebaseService {
       'lastUpdated': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
     await _logAction('Update General Setting', '$key: $value');
+  }
+
+  // Orders
+  Stream<QuerySnapshot> getAllOrders() {
+    return _firestore
+        .collection('orders')
+        .orderBy('createdAt', descending: true)
+        .snapshots();
+  }
+
+  Future<void> updateOrderStatus(String orderId, String status) async {
+    await _firestore.collection('orders').doc(orderId).update({
+      'status': status,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    await _logAction('Update Order Status', 'OrderID: $orderId, Status: $status');
+  }
+
+  // Generic helpers
+  Stream<QuerySnapshot> getCollectionStream(String collectionName) {
+    return _firestore.collection(collectionName).snapshots();
+  }
+
+  Future<void> addDocument(String collectionName, Map<String, dynamic> data) async {
+    await _firestore.collection(collectionName).add(data);
+    await _logAction('Add Document', 'Collection: $collectionName');
   }
 }

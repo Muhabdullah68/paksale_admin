@@ -161,6 +161,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   AppColors.success,
                   () => _showPushNotificationDialog(context),
                 ),
+                _buildFancyActionCard(
+                  context,
+                  'Safe Meeting Locations',
+                  'Manage public meeting places for safe transactions',
+                  Icons.location_city_rounded,
+                  Colors.teal,
+                  () => _showSafeMeetingLocations(context),
+                ),
               ],
             ),
 
@@ -503,6 +511,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 data['enableEasyPaisa'] ?? true,
                 (val) => service.updateGeneralSetting('enableEasyPaisa', val),
               ),
+              const Divider(height: 32),
+              _buildSectionHeader('Privacy & Safety Features', Icons.shield_rounded),
+              const SizedBox(height: 16),
+              _buildSettingToggle(
+                'Women Privacy Mode',
+                'Enable privacy-by-default for female users (hide phone, location, gender)',
+                data['enableWomenPrivacy'] ?? true,
+                (val) => service.updateGeneralSetting('enableWomenPrivacy', val),
+              ),
+              const Divider(height: 24),
+              _buildSettingToggle(
+                'Anonymous Selling',
+                'Allow sellers to list products without showing their name',
+                data['enableAnonymousSelling'] ?? true,
+                (val) => service.updateGeneralSetting('enableAnonymousSelling', val),
+              ),
+              const Divider(height: 24),
+              _buildSettingToggle(
+                'Female Support Team',
+                'Enable dedicated female support agent contact option',
+                data['enableFemaleSupport'] ?? true,
+                (val) => service.updateGeneralSetting('enableFemaleSupport', val),
+              ),
+              const Divider(height: 24),
+              _buildSettingToggle(
+                'Chat Privacy Warnings',
+                'Warn users when they share sensitive info (phone, CNIC, bank) in chat',
+                data['enableChatPrivacyWarnings'] ?? true,
+                (val) => service.updateGeneralSetting('enableChatPrivacyWarnings', val),
+              ),
             ],
           );
         },
@@ -772,7 +810,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     border: Border.all(color: AppColors.border),
                   ),
                   child: StreamBuilder<DocumentSnapshot>(
-                    stream: Provider.of<FirebaseService>(context, listen: false).getCmsContent(docId),
+                    stream: Provider.of<FirebaseService>(context, listen: false).getCMSContent(docId),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());
@@ -813,27 +851,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onPressed: () async {
                       final messenger = ScaffoldMessenger.of(context);
                       final nav = Navigator.of(context);
-                      try {
-                        await Provider.of<FirebaseService>(context, listen: false)
-                            .updateCmsContent(docId, controller.text);
-                        nav.pop();
-                        messenger.showSnackBar(
-                          SnackBar(
-                            content: Text('$title updated successfully'),
-                            behavior: SnackBarBehavior.floating,
-                            backgroundColor: AppColors.primary,
-                          ),
-                        );
-                      } catch (e) {
-                        nav.pop();
-                        messenger.showSnackBar(
-                          SnackBar(
-                            content: Text('Error updating $title: $e'),
-                            behavior: SnackBarBehavior.floating,
-                            backgroundColor: AppColors.error,
-                          ),
-                        );
-                      }
+                      await Provider.of<FirebaseService>(context, listen: false)
+                          .updateCMSContent(docId, controller.text);
+                      nav.pop();
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text('$title updated successfully'),
+                          behavior: SnackBarBehavior.floating,
+                          backgroundColor: AppColors.primary,
+                        ),
+                      );
                     },
                     icon: const Icon(Icons.save_rounded, size: 18),
                     label: const Text('Publish Changes'),
@@ -915,26 +942,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
               final messenger = ScaffoldMessenger.of(context);
               final nav = Navigator.of(context);
               final firebaseService = Provider.of<FirebaseService>(context, listen: false);
-              try {
-                await firebaseService.sendBroadcastNotification(titleController.text, bodyController.text);
-                nav.pop();
-                messenger.showSnackBar(
-                  const SnackBar(
-                    content: Text('Global notification dispatched!'),
-                    behavior: SnackBarBehavior.floating,
-                    backgroundColor: AppColors.success,
-                  ),
-                );
-              } catch (e) {
-                nav.pop();
-                messenger.showSnackBar(
-                  SnackBar(
-                    content: Text('Error sending notification: $e'),
-                    behavior: SnackBarBehavior.floating,
-                    backgroundColor: AppColors.error,
-                  ),
-                );
-              }
+              await firebaseService.sendBroadcastNotification(titleController.text, bodyController.text);
+              nav.pop();
+              messenger.showSnackBar(
+                const SnackBar(
+                  content: Text('Global notification dispatched!'),
+                  behavior: SnackBarBehavior.floating,
+                  backgroundColor: AppColors.success,
+                ),
+              );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
@@ -944,6 +960,88 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: const Text('Send Broadcast'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showSafeMeetingLocations(BuildContext context) {
+    final nameCtrl = TextEditingController();
+    final cityCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Container(
+          width: 700,
+          height: 600,
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Safe Meeting Locations', style: GoogleFonts.playfairDisplay(fontSize: 28, fontWeight: FontWeight.bold)),
+                      Text('Manage public places for safe user transactions', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textSecondary)),
+                    ],
+                  ),
+                  IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close)),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(child: TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Location Name', hintText: 'e.g., Emporium Mall'))),
+                  const SizedBox(width: 12),
+                  Expanded(child: TextField(controller: cityCtrl, decoration: const InputDecoration(labelText: 'City', hintText: 'e.g., Lahore'))),
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: () async {
+                      if (nameCtrl.text.trim().isEmpty || cityCtrl.text.trim().isEmpty) return;
+                      await Provider.of<FirebaseService>(context, listen: false).addDocument('safe_meeting_locations', {
+                        'name': nameCtrl.text.trim(),
+                        'city': cityCtrl.text.trim(),
+                        'createdAt': FieldValue.serverTimestamp(),
+                      });
+                      nameCtrl.clear();
+                      cityCtrl.clear();
+                    },
+                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                    child: const Text('Add', style: TextStyle(color: Colors.white)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Expanded(
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: Provider.of<FirebaseService>(context, listen: false).getCollectionStream('safe_meeting_locations'),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+                    final docs = snapshot.data?.docs ?? [];
+                    if (docs.isEmpty) return Center(child: Text('No locations added yet', style: GoogleFonts.inter(color: AppColors.textSecondary)));
+                    return ListView.builder(
+                      itemCount: docs.length,
+                      itemBuilder: (_, i) {
+                        final d = docs[i].data() as Map<String, dynamic>;
+                        return ListTile(
+                          title: Text(d['name'] ?? '', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                          subtitle: Text('${d['city'] ?? ''}', style: GoogleFonts.inter(color: AppColors.textSecondary)),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete_outline, color: AppColors.error),
+                            onPressed: () => docs[i].reference.delete(),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1077,122 +1175,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _confirmDeleteCategory(BuildContext context, String id, String name) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Delete Category?'),
-        content: Text('Are you sure you want to remove "$name"? This will affect all associated products.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () async {
-              await Provider.of<FirebaseService>(context, listen: false).deleteCategory(id);
-              if (context.mounted) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Category deleted')));
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showSubcategoryManagement(BuildContext context, String categoryId, String categoryName) {
-    final nameController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        child: Container(
-          width: 400,
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Subcategories: $categoryName', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(child: TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Subcategory Name'))),
-                  IconButton(
-                    onPressed: () async {
-                      if (nameController.text.isNotEmpty) {
-                        await Provider.of<FirebaseService>(context, listen: false)
-                            .addSubcategory(categoryId, nameController.text);
-                        nameController.clear();
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Subcategory added')),
-                          );
-                        }
-                      }
-                    },
-                    icon: const Icon(Icons.add_circle, color: AppColors.primary),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                height: 300,
-                child: StreamBuilder<QuerySnapshot>(
-                  stream: Provider.of<FirebaseService>(context, listen: false).getSubcategories(categoryId),
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-                    return ListView.builder(
-                      itemCount: snapshot.data!.docs.length,
-                      itemBuilder: (context, index) {
-                        final doc = snapshot.data!.docs[index];
-                        return ListTile(
-                          title: Text(doc['name']),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('Delete Subcategory'),
-                                  content: Text('Are you sure you want to delete "${doc['name']}"?'),
-                                  actions: [
-                                    TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-                                    ElevatedButton(
-                                      onPressed: () async {
-                                        await Provider.of<FirebaseService>(context, listen: false).deleteSubcategory(categoryId, doc.id);
-                                        if (context.mounted) {
-                                          Navigator.pop(context);
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(content: Text('Subcategory deleted')),
-                                          );
-                                        }
-                                      },
-                                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                                      child: const Text('Delete'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   void _showBannerManagement(BuildContext context) {
     final urlController = TextEditingController();
+    final linkController = TextEditingController();
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -1231,48 +1216,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: AppColors.border),
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: TextField(
-                        controller: urlController,
-                        decoration: InputDecoration(
-                          hintText: 'Enter Image URL...',
-                          prefixIcon: const Icon(Icons.link_rounded),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                          filled: true,
-                          fillColor: Colors.white,
-                        ),
+                    TextField(
+                      controller: urlController,
+                      decoration: InputDecoration(
+                        hintText: 'Enter Image URL...',
+                        prefixIcon: const Icon(Icons.link_rounded),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        filled: true,
+                        fillColor: Colors.white,
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    ElevatedButton.icon(
-                      onPressed: () async {
-                        if (urlController.text.isNotEmpty) {
-                          try {
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: linkController,
+                      decoration: InputDecoration(
+                        hintText: 'Enter Destination URL (optional)...',
+                        prefixIcon: const Icon(Icons.open_in_new_rounded),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          if (urlController.text.isNotEmpty) {
                             await Provider.of<FirebaseService>(context, listen: false)
-                                .addBanner(urlController.text, null);
+                                .addBanner(urlController.text, linkController.text.isEmpty ? null : linkController.text);
                             urlController.clear();
+                            linkController.clear();
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(content: Text('Banner published successfully')),
                               );
                             }
-                          } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Error adding banner: $e'), backgroundColor: AppColors.error),
-                              );
-                            }
                           }
-                        }
-                      },
-                      icon: const Icon(Icons.add_photo_alternate_rounded),
-                      label: const Text('Add Banner'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        },
+                        icon: const Icon(Icons.add_photo_alternate_rounded),
+                        label: const Text('Add Banner'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
                       ),
                     ),
                   ],
@@ -1300,6 +1291,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       itemCount: banners.length,
                       itemBuilder: (context, index) {
                         final doc = banners[index];
+                        final data = doc.data() as Map<String, dynamic>;
                         return Container(
                           margin: const EdgeInsets.only(bottom: 12),
                           decoration: BoxDecoration(
@@ -1311,16 +1303,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             leading: ClipRRect(
                               borderRadius: BorderRadius.circular(10),
                               child: CachedNetworkImage(
-                                imageUrl: doc['imageUrl'],
+                                imageUrl: data['imageUrl'] ?? '',
                                 width: 120,
                                 height: 60,
                                 fit: BoxFit.cover,
-                                placeholder: (context, url) => Container(color: Colors.grey[100]),
-                                errorWidget: (context, url, error) => const Icon(Icons.broken_image),
+                                placeholder: (context, url) => Container(
+                                  color: Colors.grey[100],
+                                  child: const Center(child: CircularProgressIndicator()),
+                                ),
+                                errorWidget: (context, url, error) => Container(
+                                  color: Colors.grey[100],
+                                  child: const Icon(Icons.broken_image, color: Colors.grey, size: 30),
+                                ),
                               ),
                             ),
                             title: Text('Banner ${index + 1}', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-                            subtitle: Text(doc['imageUrl'], maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.inter(fontSize: 11)),
+                            subtitle: Text(data['imageUrl'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.inter(fontSize: 11)),
                             trailing: IconButton(
                               icon: const Icon(Icons.delete_sweep_rounded, color: AppColors.error),
                               onPressed: () async {

@@ -16,9 +16,6 @@ class ProductModel {
   final bool isBoosted;
   final bool isSold;
   final bool isVerifiedSeller;
-  final bool acceptsCOD;
-  final String? codDeliveryLocation;
-  final String? codContactNumber;
   final List<String> searchKeywords;
   final String location;
   final String city;
@@ -41,9 +38,6 @@ class ProductModel {
     required this.isBoosted,
     required this.isSold,
     required this.isVerifiedSeller,
-    this.acceptsCOD = false,
-    this.codDeliveryLocation,
-    this.codContactNumber,
     required this.searchKeywords,
     this.location = 'Qatar',
     required this.city,
@@ -64,16 +58,13 @@ class ProductModel {
       category: map['category'] ?? '',
       subCategory: map['subCategory'],
       status: ProductStatus.values.firstWhere(
-        (e) => e.toString().split('.').last == (map['status'] ?? 'pending'),    
+        (e) => e.toString().split('.').last == (map['status'] ?? 'pending'),
         orElse: () => ProductStatus.pending,
       ),
       isFeatured: map['isFeatured'] ?? false,
       isBoosted: map['isBoosted'] ?? false,
       isSold: map['isSold'] ?? false,
       isVerifiedSeller: map['isVerifiedSeller'] ?? false,
-      acceptsCOD: map['acceptsCOD'] ?? false,
-      codDeliveryLocation: map['codDeliveryLocation'],
-      codContactNumber: map['codContactNumber'],
       searchKeywords: List<String>.from(map['searchKeywords'] ?? []),
       location: map['location'] ?? 'Qatar',
       city: map['city'] ?? '',
@@ -98,9 +89,6 @@ class ProductModel {
       'isBoosted': isBoosted,
       'isSold': isSold,
       'isVerifiedSeller': isVerifiedSeller,
-      'acceptsCOD': acceptsCOD,
-      'codDeliveryLocation': codDeliveryLocation,
-      'codContactNumber': codContactNumber,
       'searchKeywords': searchKeywords,
       'location': location,
       'city': city,

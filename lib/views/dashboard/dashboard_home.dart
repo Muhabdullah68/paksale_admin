@@ -132,7 +132,6 @@ class DashboardHome extends StatelessWidget {
                   onTap: () => onCardTap(2),
                 ),
               ],
-              ],
             ),
             const SizedBox(height: 40),
             _buildSectionHeader('Recent System Logs', Icons.history_edu_rounded),
