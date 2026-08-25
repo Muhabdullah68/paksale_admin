@@ -7,8 +7,15 @@ import '../../services/firebase_service.dart';
 import '../../models/product_model.dart';
 import '../../constants/app_colors.dart';
 
-class ReportsScreen extends StatelessWidget {
+class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
+
+  @override
+  State<ReportsScreen> createState() => _ReportsScreenState();
+}
+
+class _ReportsScreenState extends State<ReportsScreen> {
+  String? _platformFilter; // null | 'web' | 'app' | 'both'
 
   @override
   Widget build(BuildContext context) {
@@ -21,23 +28,51 @@ class ReportsScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Row(
               children: [
-                Text(
-                  'Moderation Center',
-                  style: GoogleFonts.playfairDisplay(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Moderation Center',
+                        style: GoogleFonts.playfairDisplay(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Review user reports and maintain marketplace integrity',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Review user reports and maintain marketplace integrity',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: AppColors.textSecondary,
+                const SizedBox(width: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String?>(
+                      value: _platformFilter,
+                      hint: Text('Platform', style: GoogleFonts.inter(fontSize: 13)),
+                      items: const [
+                        DropdownMenuItem(value: null, child: Text('All Platforms')),
+                        DropdownMenuItem(value: 'web', child: Text('Web')),
+                        DropdownMenuItem(value: 'app', child: Text('Mobile App')),
+                        DropdownMenuItem(value: 'both', child: Text('Both')),
+                      ],
+                      onChanged: (v) => setState(() => _platformFilter = v),
+                    ),
                   ),
                 ),
               ],
@@ -69,7 +104,10 @@ class ReportsScreen extends StatelessWidget {
                     );
                   }
 
-                  final docs = List.from(snapshot.data!.docs);
+                  var docs = snapshot.data!.docs
+                      .where((d) => _platformFilter == null ||
+                          ((d.data() as Map<String, dynamic>)['platform'] ?? 'both') == _platformFilter)
+                      .toList();
                   docs.sort((a, b) {
                     final dataA = a.data() as Map<String, dynamic>;
                     final dataB = b.data() as Map<String, dynamic>;
@@ -187,6 +225,23 @@ class ReportsScreen extends StatelessWidget {
                                     'Reported by: ${data['reporterName'] ?? data['reporterId'] ?? 'Anonymous'}',
                                     style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
                                   ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: _platformColor((data['platform'] ?? 'both') as String).withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: _platformColor((data['platform'] ?? 'both') as String).withValues(alpha: 0.4)),
+                                    ),
+                                    child: Text(
+                                      _platformLabel((data['platform'] ?? 'both') as String),
+                                      style: GoogleFonts.inter(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                        color: _platformColor((data['platform'] ?? 'both') as String),
+                                      ),
+                                    ),
+                                  ),
                                   const Spacer(),
                                   Text(
                                     _formatTimestamp(data['timestamp'] ?? data['createdAt']),
@@ -253,6 +308,18 @@ class ReportsScreen extends StatelessWidget {
     }
     return '${date.day}/${date.month}/${date.year}';
   }
+
+  String _platformLabel(String platform) => switch (platform) {
+        'web' => 'WEB',
+        'app' => 'APP',
+        _ => 'BOTH',
+      };
+
+  Color _platformColor(String platform) => switch (platform) {
+        'web' => AppColors.primary,
+        'app' => AppColors.success,
+        _ => AppColors.accentGold,
+      };
 
   Widget _buildSectionHeader(String title, IconData icon) {
     return Row(

@@ -22,6 +22,7 @@ class ProductModel {
   final String village;
   final String? soldLocation; // Location where the product was sold
   final String? buyerNic; // NIC of the buyer for transparency if > 20k
+  final String platform; // 'web' | 'app' | 'both' — which audience sees this listing
   final DateTime createdAt;
 
   ProductModel({
@@ -44,6 +45,7 @@ class ProductModel {
     required this.village,
     this.soldLocation,
     this.buyerNic,
+    this.platform = 'both',
     required this.createdAt,
   });
 
@@ -71,6 +73,7 @@ class ProductModel {
       village: map['village'] ?? '',
       soldLocation: map['soldLocation'],
       buyerNic: map['buyerNic'],
+      platform: map['platform'] ?? 'both',
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
@@ -95,6 +98,7 @@ class ProductModel {
       'village': village,
       'soldLocation': soldLocation,
       'buyerNic': buyerNic,
+      'platform': platform,
       'createdAt': Timestamp.fromDate(createdAt),
     };
   }

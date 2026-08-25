@@ -18,6 +18,7 @@ class UsersScreen extends StatefulWidget {
 
 class _UsersScreenState extends State<UsersScreen> {
   SellerTier? _tierFilter;
+  String? _platformFilter; // null | 'web' | 'app' | 'both'
 
   @override
   void initState() {
@@ -37,67 +38,96 @@ class _UsersScreenState extends State<UsersScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Member Management',
-                      style: GoogleFonts.playfairDisplay(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Member Management',
+                        style: GoogleFonts.playfairDisplay(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Manage platform access, verify identity, and moderate user accounts',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: AppColors.textSecondary,
+                      const SizedBox(height: 4),
+                      Text(
+                        'Manage platform access, verify identity, and moderate user accounts',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          color: AppColors.textSecondary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                Row(
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: () => _showAddUserDialog(context, firebaseService),
-                      icon: const Icon(Icons.person_add_rounded, size: 18),
-                      label: const Text('ADD NEW MEMBER'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<SellerTier?>(
-                          value: _tierFilter,
-                          dropdownColor: Colors.white,
-                          hint: Text('FILTER BY TIER', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
-                          items: [
-                            const DropdownMenuItem(value: null, child: Text('ALL TIERS')),
-                            ...SellerTier.values.map((t) => DropdownMenuItem(
-                                  value: t,
-                                  child: Text(t.toString().split('.').last.toUpperCase()),
-                                )),
-                          ],
-                          onChanged: (val) => setState(() => _tierFilter = val),
+                const SizedBox(width: 16),
+                Flexible(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () => _showAddUserDialog(context, firebaseService),
+                        icon: const Icon(Icons.person_add_rounded, size: 18),
+                        label: const Text('ADD NEW MEMBER'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 16),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String?>(
+                            value: _platformFilter,
+                            hint: Text('Platform', style: GoogleFonts.inter(fontSize: 13)),
+                            items: const [
+                              DropdownMenuItem(value: null, child: Text('All Platforms')),
+                              DropdownMenuItem(value: 'web', child: Text('Web')),
+                              DropdownMenuItem(value: 'app', child: Text('Mobile App')),
+                              DropdownMenuItem(value: 'both', child: Text('Both')),
+                            ],
+                            onChanged: (val) => setState(() => _platformFilter = val),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<SellerTier?>(
+                            value: _tierFilter,
+                            dropdownColor: Colors.white,
+                            hint: Text('FILTER BY TIER', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
+                            items: [
+                              const DropdownMenuItem(value: null, child: Text('ALL TIERS')),
+                              ...SellerTier.values.map((t) => DropdownMenuItem(
+                                    value: t,
+                                    child: Text(t.toString().split('.').last.toUpperCase()),
+                                  )),
+                            ],
+                            onChanged: (val) => setState(() => _tierFilter = val),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -132,11 +162,15 @@ class _UsersScreenState extends State<UsersScreen> {
                     if (_tierFilter != null) {
                       users = users.where((u) => u.sellerTier == _tierFilter).toList();
                     }
+
+                    if (_platformFilter != null) {
+                      users = users.where((u) => u.platform == _platformFilter).toList();
+                    }
                     
                     return DataTable2(
                       columnSpacing: 12,
                       horizontalMargin: 24,
-                      minWidth: 1000,
+                      minWidth: 1100,
                       headingRowHeight: 60,
                       dataRowHeight: 70,
                       headingRowColor: WidgetStateProperty.all(AppColors.background.withValues(alpha: 0.5)),
@@ -147,6 +181,7 @@ class _UsersScreenState extends State<UsersScreen> {
                         DataColumn(label: Text('TIER STATUS')),
                         DataColumn(label: Text('VERIFICATION')),
                         DataColumn(label: Text('BUSINESS')),
+                        DataColumn(label: Text('PLATFORM')),
                         DataColumn(label: Text('ACTIONS')),
                       ],
                       rows: users.map((user) {
@@ -186,6 +221,7 @@ class _UsersScreenState extends State<UsersScreen> {
                             color: user.isBusinessSeller ? AppColors.success : Colors.grey[300],
                             size: 20,
                           )),
+                          DataCell(_buildPlatformChip(user.platform)),
                           DataCell(Row(
                             children: [
                               IconButton(
@@ -417,6 +453,33 @@ class _UsersScreenState extends State<UsersScreen> {
     return Chip(
       label: Text(
         tier.toString().split('.').last.toUpperCase(),
+        style: const TextStyle(color: Colors.white, fontSize: 10),
+      ),
+      backgroundColor: color,
+      padding: EdgeInsets.zero,
+    );
+  }
+
+  Widget _buildPlatformChip(String platform) {
+    Color color;
+    String label;
+    switch (platform) {
+      case 'web':
+        color = AppColors.primary;
+        label = 'WEB';
+        break;
+      case 'app':
+        color = AppColors.success;
+        label = 'APP';
+        break;
+      default:
+        color = AppColors.accentGold;
+        label = 'BOTH';
+    }
+
+    return Chip(
+      label: Text(
+        label,
         style: const TextStyle(color: Colors.white, fontSize: 10),
       ),
       backgroundColor: color,

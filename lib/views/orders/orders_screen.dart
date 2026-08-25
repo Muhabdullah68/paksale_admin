@@ -15,6 +15,7 @@ class OrdersScreen extends StatefulWidget {
 
 class _OrdersScreenState extends State<OrdersScreen> {
   String _statusFilter = 'all';
+  String? _platformFilter; // null | 'web' | 'app' | 'both'
 
   Color _statusColor(String status) {
     switch (status) {
@@ -25,6 +26,36 @@ class _OrdersScreenState extends State<OrdersScreen> {
       case 'cancelled': return AppColors.error;
       default: return AppColors.textSecondary;
     }
+  }
+
+  Widget _buildPlatformBadge(String platform) {
+    Color color;
+    String label;
+    switch (platform) {
+      case 'web':
+        color = AppColors.primary;
+        label = 'WEB';
+        break;
+      case 'app':
+        color = AppColors.success;
+        label = 'APP';
+        break;
+      default:
+        color = AppColors.accentGold;
+        label = 'BOTH';
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.inter(color: color, fontSize: 11, fontWeight: FontWeight.bold),
+      ),
+    );
   }
 
   @override
@@ -39,20 +70,46 @@ class _OrdersScreenState extends State<OrdersScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('COD Orders',
-                        style: GoogleFonts.playfairDisplay(
-                          fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.primary,
-                        )),
-                    const SizedBox(height: 4),
-                    Text('Manage cash-on-delivery orders from the marketplace',
-                        style: GoogleFonts.inter(fontSize: 14, color: AppColors.textSecondary)),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('COD Orders',
+                          style: GoogleFonts.playfairDisplay(
+                            fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.primary,
+                          ),
+                          overflow: TextOverflow.ellipsis),
+                      const SizedBox(height: 4),
+                      Text('Manage cash-on-delivery orders from the marketplace',
+                          style: GoogleFonts.inter(fontSize: 14, color: AppColors.textSecondary),
+                          overflow: TextOverflow.ellipsis),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String?>(
+                      value: _platformFilter,
+                      hint: Text('Platform', style: GoogleFonts.inter(fontSize: 13)),
+                      items: const [
+                        DropdownMenuItem(value: null, child: Text('All Platforms')),
+                        DropdownMenuItem(value: 'web', child: Text('Web')),
+                        DropdownMenuItem(value: 'app', child: Text('Mobile App')),
+                        DropdownMenuItem(value: 'both', child: Text('Both')),
+                      ],
+                      onChanged: (v) => setState(() => _platformFilter = v),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   decoration: BoxDecoration(
@@ -91,6 +148,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   var docs = snapshot.data?.docs ?? [];
                   if (_statusFilter != 'all') {
                     docs = docs.where((d) => d['status'] == _statusFilter).toList();
+                  }
+                  if (_platformFilter != null) {
+                    docs = docs.where((d) => (d['platform'] ?? 'both') == _platformFilter).toList();
                   }
 
                   if (docs.isEmpty) {
@@ -183,6 +243,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                   ],
                                 ),
                               ),
+                              const SizedBox(width: 16),
+                              _buildPlatformBadge((data['platform'] ?? 'both') as String),
+                              const SizedBox(width: 12),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                 decoration: BoxDecoration(

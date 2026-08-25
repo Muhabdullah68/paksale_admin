@@ -8,7 +8,7 @@ import 'utils/theme_provider.dart';
 import 'views/dashboard/main_dashboard.dart';
 import 'views/auth/login_screen.dart';
 
-// Firebase configuration for QatarSale
+// Firebase configuration for PakSale
 const firebaseOptions = FirebaseOptions(
   apiKey: "AIzaSyDoxWNaXedeQ6ayCo2F3H5A_s3PL18uMWM",
   authDomain: "qatar-sale.firebaseapp.com",
@@ -33,19 +33,19 @@ void main() async {
         Provider<FirebaseService>(create: (_) => FirebaseService()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
-      child: const FnBMarketAdminApp(),
+      child: const PakSaleAdminApp(),
     ),
   );
 }
 
-class FnBMarketAdminApp extends StatelessWidget {
-  const FnBMarketAdminApp({super.key});
+class PakSaleAdminApp extends StatelessWidget {
+  const PakSaleAdminApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     return MaterialApp(
-      title: 'FnB Market',
+      title: 'PakSale',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,

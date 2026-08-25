@@ -7,6 +7,47 @@ class FirebaseService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  // Cache of long-lived broadcast streams so multiple widgets (and repeated
+  // rebuilds) share ONE Firestore subscription per query instead of opening
+  // duplicates. Snapshot streams re-emit current data on every listen, so late
+  // subscribers always receive a complete initial batch.
+  final Map<String, Stream<dynamic>> _sharedStreams = {};
+
+  Stream<T> _shared<T>(String key, Stream<T> Function() build) {
+    if (!_sharedStreams.containsKey(key)) {
+      _sharedStreams[key] = build();
+    }
+    return _sharedStreams[key]! as Stream<T>;
+  }
+
+  /// Server-side document count (aggregate query) — avoids downloading whole
+  /// collections just to show a number on the dashboard. Fetched once per
+  /// session; the dashboard itself stays alive across tab switches.
+  Stream<int?> watchCount(String collection, {Query<Map<String, dynamic>>? where}) {
+    Query<Map<String, dynamic>> q =
+        where ?? _firestore.collection(collection);
+    return _shared<int?>(
+        'count:$collection:${where.hashCode}',
+        () => Stream<int?>.fromFuture(
+            q.count().get().then((s) => s.count)));
+  }
+
+  // Named queries backing the dashboard KPI cards.
+  Query<Map<String, dynamic>> get pendingProductsQuery =>
+      _firestore.collection('products').where('status', isEqualTo: 'pending');
+
+  Query<Map<String, dynamic>> get featuredProductsQuery =>
+      _firestore.collection('products').where('isFeatured', isEqualTo: true);
+
+  Query<Map<String, dynamic>> get verifiedSellersQuery =>
+      _firestore.collection('users').where('sellerTier', isNotEqualTo: 'free');
+
+  Query<Map<String, dynamic>> get activeBannersQuery =>
+      _firestore.collection('banners').where('isActive', isEqualTo: true);
+
+  Query<Map<String, dynamic>> get pendingReportsQuery =>
+      _firestore.collection('reports').where('status', isEqualTo: 'pending');
+
   // System Logs
   Future<void> _logAction(String action, String details) async {
     final user = _auth.currentUser;
@@ -28,11 +69,15 @@ class FirebaseService {
 
   // Users
   Stream<List<UserModel>> getUsers() {
-    return _firestore.collection('users').snapshots().map((snapshot) {
+    return _shared('users', () => _firestore
+        .collection('users')
+        .limit(500)
+        .snapshots()
+        .map((snapshot) {
       return snapshot.docs
           .map((doc) => UserModel.fromMap(doc.data(), doc.id))
           .toList();
-    });
+    }));
   }
 
   Future<void> updateUserStatus(String uid, Map<String, dynamic> data) async {
@@ -47,7 +92,7 @@ class FirebaseService {
 
   // Products
   Stream<List<ProductModel>> getPendingProducts() {
-    return _firestore
+    return _shared('pending_products', () => _firestore
         .collection('products')
         .where('status', isEqualTo: 'pending')
         .snapshots()
@@ -55,15 +100,20 @@ class FirebaseService {
       return snapshot.docs
           .map((doc) => ProductModel.fromMap(doc.data(), doc.id))
           .toList();
-    });
+    }));
   }
 
   Stream<List<ProductModel>> getAllProducts() {
-    return _firestore.collection('products').snapshots().map((snapshot) {
+    return _shared('all_products', () => _firestore
+        .collection('products')
+        .orderBy('createdAt', descending: true)
+        .limit(500)
+        .snapshots()
+        .map((snapshot) {
       return snapshot.docs
           .map((doc) => ProductModel.fromMap(doc.data(), doc.id))
           .toList();
-    });
+    }));
   }
 
   Future<void> updateProductStatus(String productId, ProductStatus status) async {
@@ -89,6 +139,15 @@ class FirebaseService {
       'isBoosted': isBoosted,
     });
     await _logAction('Update Product Promotion', 'PID: $productId, Featured: $isFeatured, Boosted: $isBoosted');
+  }
+
+  /// Controls which audience can see a listing.
+  /// [platform] must be one of: 'web', 'app', 'both'.
+  Future<void> updateProductPlatform(String productId, String platform) async {
+    await _firestore.collection('products').doc(productId).update({
+      'platform': platform,
+    });
+    await _logAction('Update Product Platform', 'PID: $productId, Platform: $platform');
   }
 
   // Admin Management
@@ -360,22 +419,27 @@ class FirebaseService {
 
   // Banners
   Stream<QuerySnapshot> getBanners() {
-    return _firestore.collection('banners').snapshots();
+    return _shared('banners', () => _firestore.collection('banners').snapshots());
   }
 
-  Future<void> addBanner(String imageUrl, String? link) async {
+  /// [platform] must be one of: 'web', 'app', 'both'.
+  /// `isActive: true` is required — the app/website only show active banners.
+  Future<void> addBanner(String imageUrl, String? link, {String platform = 'both'}) async {
     await _firestore.collection('banners').add({
       'imageUrl': imageUrl,
       'link': link,
+      'isActive': true,
+      'platform': platform,
       'createdAt': FieldValue.serverTimestamp(),
     });
     
     await sendBroadcastNotification(
       'New Promotion!',
       'Check out our new featured banners for exciting offers.',
+      platform: platform,
     );
     
-    await _logAction('Add Banner', 'URL: $imageUrl');
+    await _logAction('Add Banner', 'URL: $imageUrl, Platform: $platform');
   }
 
   Future<void> deleteBanner(String id) async {
@@ -384,23 +448,33 @@ class FirebaseService {
   }
 
   // Global Notifications (Broadcast)
-  Future<void> sendBroadcastNotification(String title, String body) async {
+  /// [platform] must be one of: 'web', 'app', 'both'.
+  /// Writes both `createdAt` (read by the app/website streams, which order by
+  /// it) and the legacy `timestamp` field for backward compatibility.
+  Future<void> sendBroadcastNotification(String title, String body, {String platform = 'both'}) async {
     await _firestore.collection('broadcast_notifications').add({
       'title': title,
       'body': body,
+      'platform': platform,
       'timestamp': FieldValue.serverTimestamp(),
+      'createdAt': FieldValue.serverTimestamp(),
     });
-    await _logAction('Send Broadcast Notification', 'Title: $title');
+    await _logAction('Send Broadcast Notification', 'Title: $title, Platform: $platform');
   }
 
   // Notifications
+  /// Matches the app's notification schema (`createdAt`, `isRead`, `type`)
+  /// so admin-sent notifications actually appear in user inboxes.
   Future<void> sendNotification(String userId, String title, String body) async {
     await _firestore.collection('notifications').add({
       'userId': userId,
+      'type': 'system',
       'title': title,
       'body': body,
       'timestamp': FieldValue.serverTimestamp(),
+      'createdAt': FieldValue.serverTimestamp(),
       'read': false,
+      'isRead': false,
     });
     await _logAction('Send Personal Notification', 'UID: $userId, Title: $title');
   }
@@ -416,11 +490,12 @@ class FirebaseService {
 
   // Reports (Moderation)
   Stream<QuerySnapshot> getReports() {
-    return _firestore
+    return _shared('reports', () => _firestore
         .collection('reports')
         // Removing orderBy temporarily as it might filter out documents missing the timestamp field
         // .orderBy('timestamp', descending: true)
-        .snapshots();
+        .limit(300)
+        .snapshots());
   }
 
   Future<void> updateReportStatus(String reportId, String status) async {
@@ -445,15 +520,18 @@ class FirebaseService {
   }
 
   // Orders
+  /// NOTE: the marketplace app writes orders to `cod_orders` — reading the
+  /// legacy `orders` collection here returned an empty list.
   Stream<QuerySnapshot> getAllOrders() {
-    return _firestore
-        .collection('orders')
+    return _shared('orders', () => _firestore
+        .collection('cod_orders')
         .orderBy('createdAt', descending: true)
-        .snapshots();
+        .limit(300)
+        .snapshots());
   }
 
   Future<void> updateOrderStatus(String orderId, String status) async {
-    await _firestore.collection('orders').doc(orderId).update({
+    await _firestore.collection('cod_orders').doc(orderId).update({
       'status': status,
       'updatedAt': FieldValue.serverTimestamp(),
     });

@@ -13,6 +13,8 @@ class UserModel {
   final bool isBusinessSeller;
   final bool isAdminApproved;
   final String idVerificationStatus; // pending, approved, rejected
+  // Signup origin: 'web' | 'app'. Legacy members without the field count as 'both'.
+  final String platform;
   final DateTime createdAt;
 
   UserModel({
@@ -26,6 +28,7 @@ class UserModel {
     required this.isBusinessSeller,
     required this.isAdminApproved,
     required this.idVerificationStatus,
+    this.platform = 'both',
     required this.createdAt,
   });
 
@@ -44,6 +47,7 @@ class UserModel {
       isBusinessSeller: map['isBusinessSeller'] ?? false,
       isAdminApproved: map['isAdminApproved'] ?? false,
       idVerificationStatus: map['idVerificationStatus'] ?? 'pending',
+      platform: map['platform'] ?? 'both',
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }

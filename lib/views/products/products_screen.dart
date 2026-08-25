@@ -21,6 +21,7 @@ class ProductsScreen extends StatefulWidget {
 class _ProductsScreenState extends State<ProductsScreen> {
   ProductStatus? _statusFilter;
   bool? _featuredFilter;
+  String? _platformFilter; // null | 'web' | 'app' | 'both'
 
   @override
   void initState() {
@@ -41,64 +42,93 @@ class _ProductsScreenState extends State<ProductsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Inventory Moderation',
-                      style: GoogleFonts.playfairDisplay(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Inventory Moderation',
+                        style: GoogleFonts.playfairDisplay(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Approve, feature, or manage marketplace listings',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: AppColors.textSecondary,
+                      const SizedBox(height: 4),
+                      Text(
+                        'Approve, feature, or manage marketplace listings',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          color: AppColors.textSecondary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<ProductStatus?>(
-                          value: _statusFilter,
-                          hint: Text('Status', style: GoogleFonts.inter(fontSize: 13)),
-                          items: [
-                            const DropdownMenuItem(value: null, child: Text('All Status')),
-                            ...ProductStatus.values.map((s) => DropdownMenuItem(
-                                  value: s,
-                                  child: Text(s.toString().split('.').last.toUpperCase()),
-                                )),
-                          ],
-                          onChanged: (val) => setState(() => _statusFilter = val),
+                const SizedBox(width: 16),
+                Flexible(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<ProductStatus?>(
+                            value: _statusFilter,
+                            hint: Text('Status', style: GoogleFonts.inter(fontSize: 13)),
+                            items: [
+                              const DropdownMenuItem(value: null, child: Text('All Status')),
+                              ...ProductStatus.values.map((s) => DropdownMenuItem(
+                                    value: s,
+                                    child: Text(s.toString().split('.').last.toUpperCase()),
+                                  )),
+                            ],
+                            onChanged: (val) => setState(() => _statusFilter = val),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    FilterChip(
-                      label: Text('Featured', style: GoogleFonts.inter(fontSize: 13)),
-                      selected: _featuredFilter ?? false,
-                      onSelected: (val) => setState(() => _featuredFilter = val ? true : null),
-                      backgroundColor: Colors.white,
-                      selectedColor: AppColors.accentGold.withValues(alpha: 0.2),
-                      checkmarkColor: AppColors.accentGold,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ],
+                      const SizedBox(width: 16),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String?>(
+                            value: _platformFilter,
+                            hint: Text('Platform', style: GoogleFonts.inter(fontSize: 13)),
+                            items: const [
+                              DropdownMenuItem(value: null, child: Text('All Platforms')),
+                              DropdownMenuItem(value: 'web', child: Text('Web')),
+                              DropdownMenuItem(value: 'app', child: Text('Mobile App')),
+                              DropdownMenuItem(value: 'both', child: Text('Both')),
+                            ],
+                            onChanged: (val) => setState(() => _platformFilter = val),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      FilterChip(
+                        label: Text('Featured', style: GoogleFonts.inter(fontSize: 13)),
+                        selected: _featuredFilter ?? false,
+                        onSelected: (val) => setState(() => _featuredFilter = val ? true : null),
+                        backgroundColor: Colors.white,
+                        selectedColor: AppColors.accentGold.withValues(alpha: 0.2),
+                        checkmarkColor: AppColors.accentGold,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -138,6 +168,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       if (_featuredFilter == true) {
                         products = products.where((p) => p.isFeatured).toList();
                       }
+                      if (_platformFilter != null) {
+                        products = products.where((p) => p.platform == _platformFilter).toList();
+                      }
                       
                       return DataTable2(
                         columnSpacing: 12,
@@ -150,6 +183,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                           DataColumn2(label: Text('Title'), size: ColumnSize.L),
                           DataColumn(label: Text('Price (QAR)')),
                           DataColumn(label: Text('Location')),
+                          DataColumn(label: Text('Platform')),
                           DataColumn(label: Text('Status')),
                           DataColumn(label: Text('Actions')),
                         ],
@@ -204,6 +238,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                             DataCell(Text(product.title, style: GoogleFonts.inter(fontWeight: FontWeight.w500))),
                             DataCell(Text(product.price.toStringAsFixed(0), style: GoogleFonts.inter(fontWeight: FontWeight.bold))),
                             DataCell(Text('${product.city}, ${product.village}', style: GoogleFonts.inter(fontSize: 12))),
+                            DataCell(_buildPlatformChip(product.platform)),
                             DataCell(_buildStatusChip(product.status)),
                             DataCell(Row(
                               children: [
@@ -303,6 +338,33 @@ class _ProductsScreenState extends State<ProductsScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildPlatformChip(String platform) {
+    Color color;
+    String label;
+    switch (platform) {
+      case 'web':
+        color = AppColors.primary;
+        label = 'WEB';
+        break;
+      case 'app':
+        color = AppColors.success;
+        label = 'APP';
+        break;
+      default:
+        color = AppColors.accentGold;
+        label = 'BOTH';
+    }
+
+    return Chip(
+      label: Text(
+        label,
+        style: const TextStyle(color: Colors.white, fontSize: 10),
+      ),
+      backgroundColor: color,
+      padding: EdgeInsets.zero,
     );
   }
 

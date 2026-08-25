@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:sidebarx/sidebarx.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
+import '../../widgets/app_logo_icon.dart';
 import '../../models/product_model.dart';
 import '../../models/user_model.dart';
 import '../products/products_screen.dart';
@@ -45,8 +46,7 @@ class _MainDashboardState extends State<MainDashboard> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final isDesktop = Responsive.isDesktop(context);
+  Widget build(BuildContext context) {    final isDesktop = Responsive.isDesktop(context);
 
     return Scaffold(
       key: _key,
@@ -55,7 +55,7 @@ class _MainDashboardState extends State<MainDashboard> {
           ? null
           : AppBar(
               title: Text(
-                'QatarSale Admin',
+                'PakSale Admin',
                 style: GoogleFonts.playfairDisplay(fontWeight: FontWeight.bold),
               ),
               leading: IconButton(
@@ -75,11 +75,30 @@ class _MainDashboardState extends State<MainDashboard> {
                   child: AnimatedBuilder(
                     animation: _controller,
                     builder: (context, child) {
-                      return AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 200), // Slightly faster for snappier feel
-                        switchInCurve: Curves.easeIn,
-                        switchOutCurve: Curves.easeOut,
-                        child: _buildScreen(_controller.selectedIndex),
+                      // IndexedStack keeps every screen alive so switching tabs
+                      // no longer destroys state and re-subscribes/refetches.
+                      return IndexedStack(
+                        index: _controller.selectedIndex.clamp(0, 6),
+                        children: [
+                          DashboardHome(
+                            onNavigateToProducts: _navigateToProducts,
+                            onNavigateToUsers: _navigateToUsers,
+                            onCardTap: (i) => _controller.selectIndex(i),
+                          ),
+                          ProductsScreen(
+                            key: ValueKey('products_$_productStatusFilter$_productFeaturedFilter'),
+                            initialStatus: _productStatusFilter,
+                            filterFeatured: _productFeaturedFilter,
+                          ),
+                          const OrdersScreen(),
+                          UsersScreen(
+                            key: ValueKey('users_$_userTierFilter'),
+                            initialTier: _userTierFilter,
+                          ),
+                          const ReportsScreen(),
+                          const FinanceScreen(),
+                          const SettingsScreen(),
+                        ],
                       );
                     },
                   ),
@@ -90,42 +109,6 @@ class _MainDashboardState extends State<MainDashboard> {
         ],
       ),
     );
-  }
-
-  Widget _buildScreen(int index) {
-    switch (index) {
-      case 0:
-        return DashboardHome(
-          onNavigateToProducts: _navigateToProducts,
-          onNavigateToUsers: _navigateToUsers,
-          onCardTap: (i) => _controller.selectIndex(i),
-        );
-      case 1:
-        return ProductsScreen(
-          key: ValueKey('products_$_productStatusFilter$_productFeaturedFilter'),
-          initialStatus: _productStatusFilter,
-          filterFeatured: _productFeaturedFilter,
-        );
-      case 2:
-        return const OrdersScreen();
-      case 3:
-        return UsersScreen(
-          key: ValueKey('users_$_userTierFilter'),
-          initialTier: _userTierFilter,
-        );
-      case 4:
-        return const ReportsScreen();
-      case 5:
-        return const FinanceScreen();
-      case 6:
-        return const SettingsScreen();
-      default:
-        return DashboardHome(
-          onNavigateToProducts: _navigateToProducts,
-          onNavigateToUsers: _navigateToUsers,
-          onCardTap: (i) => _controller.selectIndex(i),
-        );
-    }
   }
 }
 
@@ -169,7 +152,7 @@ class _TopBar extends StatelessWidget {
                 style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
               ),
               Text(
-                'admin@qatarsale.com',
+                'admin@paksale.com',
                 style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
               ),
             ],
@@ -194,7 +177,7 @@ class _TopBar extends StatelessWidget {
       case 4: return 'Moderation Reports';
       case 5: return 'Financial Analytics';
       case 6: return 'System Settings';
-      default: return 'QatarSale Admin';
+      default: return 'PakSale Admin';
     }
   }
 }
@@ -235,10 +218,10 @@ class _Sidebar extends StatelessWidget {
                 ? Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.admin_panel_settings, color: AppColors.accentGold, size: 32),
+                      const AppLogoIcon(size: 32, color: AppColors.accentGold),
                       const SizedBox(width: 12),
                       Text(
-                        'QATARSALE',
+                        'PAKSALE',
                         style: GoogleFonts.playfairDisplay(
                           color: Colors.white,
                           fontSize: 20,
@@ -248,7 +231,7 @@ class _Sidebar extends StatelessWidget {
                       ),
                     ],
                   )
-                : const Icon(Icons.admin_panel_settings, color: AppColors.accentGold, size: 32),
+                : const AppLogoIcon(size: 32, color: AppColors.accentGold),
           ),
         );
       },

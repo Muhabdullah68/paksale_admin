@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
+import '../../widgets/app_logo_icon.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -71,10 +72,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.admin_panel_settings, size: 80, color: AppColors.accentGold),
+                      const AppLogoIcon(size: 80, color: AppColors.accentGold),
                       const SizedBox(height: 24),
                       Text(
-                        'QatarSale\nAdmin Portal',
+                        'PakSale\nAdmin Portal',
                         style: GoogleFonts.playfairDisplay(
                           fontSize: 48,
                           fontWeight: FontWeight.bold,
@@ -120,7 +121,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           if (!isDesktop) ...[
-                            const Icon(Icons.admin_panel_settings, size: 48, color: AppColors.primary),
+                            const AppLogoIcon(size: 48, color: AppColors.primary),
                             const SizedBox(height: 16),
                           ],
                           Text(
@@ -152,7 +153,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           TextFormField(
                             controller: _emailController,
                             decoration: const InputDecoration(
-                              hintText: 'admin@qatarsale.com',
+                              hintText: 'admin@paksale.com',
                               prefixIcon: Icon(Icons.email_outlined, size: 20),
                             ),
                             validator: (value) {

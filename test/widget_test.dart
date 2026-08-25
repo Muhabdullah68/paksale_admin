@@ -12,9 +12,9 @@ import 'package:market_place_admin/main.dart';
 void main() {
   testWidgets('Dashboard smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const FnBMarketAdminApp());
+    await tester.pumpWidget(const PakSaleAdminApp());
 
     // Verify that the Dashboard is shown.
-    expect(find.text('FnB Market'), findsOneWidget);
+    expect(find.text('PakSale'), findsOneWidget);
   });
 }

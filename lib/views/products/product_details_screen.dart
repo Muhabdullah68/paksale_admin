@@ -147,6 +147,66 @@ class ProductDetailsScreen extends StatelessWidget {
                             ],
                           ),
                           const SizedBox(height: 24),
+                          // Audience control: which platform(s) show this listing.
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'VISIBLE ON'.toUpperCase(),
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 1.1,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: AppColors.border),
+                                      ),
+                                      child: DropdownButtonHideUnderline(
+                                        child: DropdownButton<String>(
+                                          value: product.platform,
+                                          isExpanded: true,
+                                          style: GoogleFonts.inter(fontSize: 14, color: AppColors.primary),
+                                          items: const [
+                                            DropdownMenuItem(value: 'web', child: Text('Website only')),
+                                            DropdownMenuItem(value: 'app', child: Text('Mobile App only')),
+                                            DropdownMenuItem(value: 'both', child: Text('Both Website & App')),
+                                          ],
+                                          onChanged: (val) async {
+                                            if (val == null || val == product.platform) return;
+                                            await firebaseService.updateProductPlatform(product.id, val);
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(
+                                                  content: Text(val == 'both'
+                                                      ? 'Listing visible on Web & App'
+                                                      : val == 'web'
+                                                          ? 'Listing visible on Website only'
+                                                          : 'Listing visible on Mobile App only'),
+                                                  backgroundColor: AppColors.success,
+                                                  behavior: SnackBarBehavior.floating,
+                                                ),
+                                              );
+                                            }
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
                           _buildInfoSection('Seller ID', product.sellerId),
                           const SizedBox(height: 24),
                           if (product.isSold) ...[

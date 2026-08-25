@@ -882,9 +882,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showPushNotificationDialog(BuildContext context) {
     final titleController = TextEditingController();
     final bodyController = TextEditingController();
+    String broadcastPlatform = 'both';
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Row(
           children: [
@@ -900,7 +901,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Text('Broadcast Message', style: GoogleFonts.playfairDisplay(fontWeight: FontWeight.bold)),
           ],
         ),
-        content: Column(
+        content: StatefulBuilder(
+          builder: (dialogContext, setDialogState) => Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -929,24 +931,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
+            const SizedBox(height: 16),
+            Text('Show on', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'web', label: Text('Website'), icon: Icon(Icons.language)),
+                ButtonSegment(value: 'app', label: Text('Mobile App'), icon: Icon(Icons.smartphone)),
+                ButtonSegment(value: 'both', label: Text('Both'), icon: Icon(Icons.done_all)),
+              ],
+              selected: {broadcastPlatform},
+              onSelectionChanged: (selection) =>
+                  setDialogState(() => broadcastPlatform = selection.first),
+            ),
           ],
+        ),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: Text('Cancel', style: GoogleFonts.inter(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
             onPressed: () async {
               if (titleController.text.isEmpty || bodyController.text.isEmpty) return;
-              final messenger = ScaffoldMessenger.of(context);
-              final nav = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(dialogContext);
+              final nav = Navigator.of(dialogContext);
               final firebaseService = Provider.of<FirebaseService>(context, listen: false);
-              await firebaseService.sendBroadcastNotification(titleController.text, bodyController.text);
+              await firebaseService.sendBroadcastNotification(titleController.text, bodyController.text, platform: broadcastPlatform);
               nav.pop();
               messenger.showSnackBar(
-                const SnackBar(
-                  content: Text('Global notification dispatched!'),
+                SnackBar(
+                  content: Text(broadcastPlatform == 'both'
+                      ? 'Global notification dispatched!'
+                      : broadcastPlatform == 'web'
+                          ? 'Notification sent to Website users!'
+                          : 'Notification sent to Mobile App users!'),
                   behavior: SnackBarBehavior.floating,
                   backgroundColor: AppColors.success,
                 ),
@@ -1178,6 +1198,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showBannerManagement(BuildContext context) {
     final urlController = TextEditingController();
     final linkController = TextEditingController();
+    String bannerPlatform = 'both';
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -1185,7 +1206,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: Container(
           width: 700,
           padding: const EdgeInsets.all(32),
-          child: Column(
+          child: StatefulBuilder(
+            builder: (context, setDialogState) => Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1241,13 +1263,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
+                    Text('Show on', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 8),
+                    SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment(value: 'web', label: Text('Website'), icon: Icon(Icons.language)),
+                        ButtonSegment(value: 'app', label: Text('Mobile App'), icon: Icon(Icons.smartphone)),
+                        ButtonSegment(value: 'both', label: Text('Both'), icon: Icon(Icons.done_all)),
+                      ],
+                      selected: {bannerPlatform},
+                      onSelectionChanged: (selection) =>
+                          setDialogState(() => bannerPlatform = selection.first),
+                    ),
+                    const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         onPressed: () async {
                           if (urlController.text.isNotEmpty) {
                             await Provider.of<FirebaseService>(context, listen: false)
-                                .addBanner(urlController.text, linkController.text.isEmpty ? null : linkController.text);
+                                .addBanner(urlController.text, linkController.text.isEmpty ? null : linkController.text, platform: bannerPlatform);
                             urlController.clear();
                             linkController.clear();
                             if (context.mounted) {
@@ -1319,11 +1354,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ),
                             title: Text('Banner ${index + 1}', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
                             subtitle: Text(data['imageUrl'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.inter(fontSize: 11)),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.delete_sweep_rounded, color: AppColors.error),
-                              onPressed: () async {
-                                await Provider.of<FirebaseService>(context, listen: false).deleteBanner(doc.id);
-                              },
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _platformBadge(data['platform']),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_sweep_rounded, color: AppColors.error),
+                                  onPressed: () async {
+                                    await Provider.of<FirebaseService>(context, listen: false).deleteBanner(doc.id);
+                                  },
+                                ),
+                              ],
                             ),
                           ),
                         );
@@ -1333,9 +1374,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
             ],
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _platformBadge(dynamic platform) {
+    final String value = (platform ?? 'both').toString();
+    late final String label;
+    late final Color color;
+    switch (value) {
+      case 'web':
+        label = 'WEB';
+        color = AppColors.primary;
+        break;
+      case 'app':
+        label = 'APP';
+        color = AppColors.success;
+        break;
+      default:
+        label = 'BOTH';
+        color = AppColors.accentGold;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
+      ),
+      child: Text(label, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: color)),
     );
   }
 }

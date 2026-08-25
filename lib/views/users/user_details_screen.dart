@@ -7,14 +7,22 @@ import '../../services/firebase_service.dart';
 import '../../constants/app_colors.dart';
 import 'package:provider/provider.dart';
 
-class UserDetailsScreen extends StatelessWidget {
+class UserDetailsScreen extends StatefulWidget {
   final UserModel user;
 
   const UserDetailsScreen({super.key, required this.user});
 
   @override
+  State<UserDetailsScreen> createState() => _UserDetailsScreenState();
+}
+
+class _UserDetailsScreenState extends State<UserDetailsScreen> {
+  late String _platform = widget.user.platform; // 'web' | 'app' | 'both'
+
+  @override
   Widget build(BuildContext context) {
     final firebaseService = Provider.of<FirebaseService>(context, listen: false);
+    final user = widget.user;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -73,6 +81,35 @@ class UserDetailsScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 24),
                           _buildTierBadge(user.sellerTier),
+                          const SizedBox(height: 24),
+                          Text(
+                            'VISIBLE ON',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.2,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          DropdownButton<String>(
+                            value: _platform,
+                            underline: const SizedBox.shrink(),
+                            items: const [
+                              DropdownMenuItem(value: 'both', child: Text('Website & Mobile App')),
+                              DropdownMenuItem(value: 'web', child: Text('Website only')),
+                              DropdownMenuItem(value: 'app', child: Text('Mobile App only')),
+                            ],
+                            onChanged: (val) async {
+                              if (val == null || val == _platform) return;
+                              final messenger = ScaffoldMessenger.of(context);
+                              await firebaseService.updateUserStatus(user.uid, {'platform': val});
+                              if (!mounted) return;
+                              setState(() => _platform = val);
+                              messenger.showSnackBar(
+                                const SnackBar(content: Text('Member platform updated')),
+                              );
+                            },
+                          ),
                           const SizedBox(height: 32),
                           const Divider(),
                           const SizedBox(height: 32),
@@ -82,6 +119,14 @@ class UserDetailsScreen extends StatelessWidget {
                           _buildDetailRow('Joined', DateFormat('MMM dd, yyyy').format(user.createdAt)),
                           _buildDetailRow('Status', user.isAdminApproved ? 'Active' : 'Suspended'),
                           _buildDetailRow('Business', user.isBusinessSeller ? 'Yes' : 'No'),
+                          _buildDetailRow(
+                            'Platform',
+                            switch (_platform) {
+                              'web' => 'Website',
+                              'app' => 'Mobile App',
+                              _ => 'Website & Mobile App',
+                            },
+                          ),
                         ],
                       ),
                     ),

@@ -56,39 +56,36 @@ class DashboardHome extends StatelessWidget {
             const SizedBox(height: 16),
             Row(
               children: [
-                _buildSummaryCard(
+                _buildCountCard(
                   'Pending Ads',
-                  firebaseService.getPendingProducts(),
-                  (List<ProductModel> items) => items.length.toString(),
+                  firebaseService.watchCount('products',
+                      where: firebaseService.pendingProductsQuery),
                   Icons.pending_actions,
                   AppColors.warning,
                   onTap: () => onNavigateToProducts(status: ProductStatus.pending),
                 ),
                 const SizedBox(width: 20),
-                _buildSummaryCard(
+                _buildCountCard(
                   'Total Users',
-                  firebaseService.getUsers(),
-                  (List<UserModel> items) => items.length.toString(),
+                  firebaseService.watchCount('users'),
                   Icons.people,
                   AppColors.primary,
                   onTap: () => onNavigateToUsers(),
                 ),
                 const SizedBox(width: 20),
-                _buildSummaryCard(
+                _buildCountCard(
                   'Verified Sellers',
-                  firebaseService.getUsers(),
-                  (List<UserModel> items) => 
-                    items.where((u) => u.sellerTier != SellerTier.free).length.toString(),
+                  firebaseService.watchCount('users',
+                      where: firebaseService.verifiedSellersQuery),
                   Icons.verified_user,
                   AppColors.success,
                   onTap: () => onNavigateToUsers(tier: SellerTier.verified),
                 ),
                 const SizedBox(width: 20),
-                _buildSummaryCard(
+                _buildCountCard(
                   'Premium Ads',
-                  firebaseService.getAllProducts(),
-                  (List<ProductModel> items) => 
-                    items.where((p) => p.isFeatured).length.toString(),
+                  firebaseService.watchCount('products',
+                      where: firebaseService.featuredProductsQuery),
                   Icons.star,
                   AppColors.accentGold,
                   onTap: () => onNavigateToProducts(featured: true),
@@ -100,33 +97,35 @@ class DashboardHome extends StatelessWidget {
             const SizedBox(height: 16),
             Row(
               children: [
-                _buildStreamSummaryCard(
-                  'Total Categories',
-                  firebaseService.getCategories(),
+                _buildCountCard(
+                  'Categories',
+                  firebaseService.watchCount('categories'),
                   Icons.category,
                   AppColors.primary,
                   onTap: () => onCardTap(6),
                 ),
                 const SizedBox(width: 20),
-                _buildStreamSummaryCard(
+                _buildCountCard(
                   'Active Banners',
-                  firebaseService.getBanners(),
+                  firebaseService.watchCount('banners',
+                      where: firebaseService.activeBannersQuery),
                   Icons.image,
                   AppColors.accentGold,
                   onTap: () => onCardTap(6),
                 ),
                 const SizedBox(width: 20),
-                _buildStreamSummaryCard(
+                _buildCountCard(
                   'Active Reports',
-                  firebaseService.getReports(),
+                  firebaseService.watchCount('reports',
+                      where: firebaseService.pendingReportsQuery),
                   Icons.report_problem,
                   AppColors.error,
                   onTap: () => onCardTap(4),
                 ),
                 const SizedBox(width: 20),
-                _buildStreamSummaryCard(
+                _buildCountCard(
                   'COD Orders',
-                  firebaseService.getAllOrders(),
+                  firebaseService.watchCount('cod_orders'),
                   Icons.receipt_long,
                   AppColors.success,
                   onTap: () => onCardTap(2),
@@ -250,81 +249,18 @@ class DashboardHome extends StatelessWidget {
     );
   }
 
-  Widget _buildStreamSummaryCard(
+  Widget _buildCountCard(
     String title,
-    Stream<QuerySnapshot> stream,
+    Stream<int?> countStream,
     IconData icon,
     Color color, {
     required VoidCallback onTap,
   }) {
     return Expanded(
-      child: StreamBuilder<QuerySnapshot>(
-        stream: stream,
+      child: StreamBuilder<int?>(
+        stream: countStream,
         builder: (context, snapshot) {
-          final count = snapshot.hasData ? snapshot.data!.docs.length.toString() : '...';
-          return Card(
-            child: InkWell(
-              onTap: onTap,
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(icon, color: color, size: 24),
-                        ),
-                        const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textSecondary),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      count,
-                      style: GoogleFonts.inter(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      title,
-                      style: GoogleFonts.inter(
-                        color: AppColors.textSecondary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildSummaryCard<T>(
-    String title,
-    Stream<List<T>> stream,
-    String Function(List<T>) countBuilder,
-    IconData icon,
-    Color color, {
-    required VoidCallback onTap,
-  }) {
-    return Expanded(
-      child: StreamBuilder<List<T>>(
-        stream: stream,
-        builder: (context, snapshot) {
-          final count = snapshot.hasData ? countBuilder(snapshot.data!) : '...';
+          final count = snapshot.hasData ? snapshot.data!.toString() : '...';
           return Card(
             child: InkWell(
               onTap: onTap,
